@@ -28,7 +28,7 @@ def search(request):
     search_results = [] 
     
     
-    def dynamic_weighting(query):
+    def dynamic_weighting(query:
     # Simple rule: if the query is short and specific, prioritize keyword search
         query_length = len(query.split())
         if query_length > 5:
