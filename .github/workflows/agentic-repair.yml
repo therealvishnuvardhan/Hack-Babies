@@ -35,8 +35,7 @@ jobs:
         echo "Running automated test suites for all files in the system..."
         export PYTHONPATH=$PYTHONPATH:$(pwd)/myproject
         export DJANGO_SETTINGS_MODULE=myproject.settings
-        pytest . > test_output.log 2>&1
-        cat test_output.log
+        pytest . 2>&1 | tee test_output.log
       continue-on-error: true
 
     - name: Trigger Agentic AI Repair (On Failure)
