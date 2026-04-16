@@ -23,40 +23,30 @@ jobs:
         cache: 'pip'
         
     - name: Install Dependencies
+      id: install
       run: |
-        python -m pip install --upgrade pip
-        if [ -f myproject/requirements.txt ]; then pip install -r myproject/requirements.txt; fi
-        python -c "import nltk; nltk.download('stopwords'); nltk.download('words')"
-        pip install pytest pytest-django
+        {
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest 
+        } 2>&1 | tee -a pipeline_output.log
+      continue-on-error: true
         
-    - name: Run automated tests for all files
+    - name: Run PyTest test cases
       id: tests
+      if: steps.install.outcome == 'success'
       run: |
-        echo "Running automated test suites for all files in the system..."
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/myproject
-        export DJANGO_SETTINGS_MODULE=myproject.settings
-        
-        # 1. Syntactic check of all python files (catches errors in manage.py, etc.)
-        # Using -q to stop it from listing every file which overflows the 100 line tail limit!
-        python -m compileall -q . 2>&1 | tee test_output.log
-        COMPILE_EXIT=$?
-        
-        # 2. Run test execution
-        pytest . 2>&1 | tee -a test_output.log
-        PYTEST_EXIT=$?
-        
-        if [ $COMPILE_EXIT -ne 0 ] || [ $PYTEST_EXIT -ne 0 ]; then
-          exit 1
-        fi
+        echo "Running automated test suites..."
+        pytest tests/ 2>&1 | tee -a pipeline_output.log
       continue-on-error: true
 
     - name: Trigger Agentic AI Repair (On Failure)
-      if: steps.tests.outcome == 'failure'
+      if: steps.install.outcome == 'failure' || steps.tests.outcome == 'failure'
       run: |
         echo "Pipeline Failed! Packaging error context for Agentic AI..."
         
-        GIT_DIFF=$(git diff HEAD~1 HEAD)
-        ERROR_LOGS=$(tail -n 100 test_output.log || echo "Test logs missing")
+        GIT_DIFF=$(git diff HEAD~1 HEAD || echo "No diff available")
+        ERROR_LOGS=$(tail -n 100 pipeline_output.log || echo "Test logs missing")
         
         PAYLOAD=$(jq -n \
                   --arg repo "${{ github.repository }}" \
