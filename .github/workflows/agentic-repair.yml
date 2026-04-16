@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline with Agentic Repair
 
 on:
   push:
@@ -16,32 +16,33 @@ jobs:
       with:
         fetch-depth: 0
         
-    - name: Set up Python
+    - name: Set up Python Environment
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
+        cache: 'pip'
         
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest 
         
-    - name: Run Tests (Simulate failure or run actual tests)
-      id: run_tests
+    - name: Run PyTest test cases
+      id: tests
       run: |
-        echo "Traceback: ZeroDivisionError" > test_output.log
-        exit 1
-        
+        echo "Running automated test suites..."
+        pytest tests/ > test_output.log 2>&1
+        cat test_output.log
       continue-on-error: true
 
-    - name: Agentic CI/CD Webhook Trigger
-      if: steps.run_tests.outcome == 'failure'
+    - name: Trigger Agentic AI Repair (On Failure)
+      if: steps.tests.outcome == 'failure'
       run: |
-        echo "Tests failed. Extracting logs and diff for Agentic Repair..."
+        echo "Pipeline Failed! Packaging error context for Agentic AI..."
         
         GIT_DIFF=$(git diff HEAD~1 HEAD)
-        
-        ERROR_LOGS=$(head -n 50 test_output.log || echo "No logs found")
+        ERROR_LOGS=$(tail -n 100 test_output.log || echo "Test logs missing")
         
         PAYLOAD=$(jq -n \
                   --arg repo "${{ github.repository }}" \
@@ -55,5 +56,5 @@ jobs:
              -H "Content-Type: application/json" \
              -d "$PAYLOAD"
              
-        echo "Webhook sent! Pipeline halted, awaiting Agentic Fix Approval."
-        exit 
+        echo "Agentic AI pipeline triggered."
+        exit 1
