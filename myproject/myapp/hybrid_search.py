@@ -9,7 +9,7 @@ REMOVED_STOPWORDS = ['of']
 for word in REMOVED_STOPWORDS:
     STOPWORDS.discard(word)
 
-RESTRICTED_WORDS = ['say','says','about','means','mean','a', "an", "the", "on", "in", "at", "by", "to", "for", "with", "about", 
+RESTRICTED_WORDS = ['say''says','about','means','mean','a', "an", "the", "on", "in", "at", "by", "to", "for", "with", "about", 
     "into", "onto", "upon", "from", "over", "under", "through", "between", 
     "and", "or", "but", "so", "yet", "nor", "either", "neither", "both", 
     "it", "its", "they", "them", "he", "she", "him", "her", "this", "that", 
