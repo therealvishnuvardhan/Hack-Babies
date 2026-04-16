@@ -40,25 +40,6 @@ jobs:
         pytest tests/ 2>&1 | tee -a pipeline_output.log
       continue-on-error: true
 
-    - name: Trigger Agentic AI Repair (On Failure)
-      if: steps.install.outcome == 'failure' || steps.tests.outcome == 'failure'
-      run: |
-        echo "Pipeline Failed! Packaging error context for Agentic AI..."
-        
-        GIT_DIFF=$(git diff HEAD~1 HEAD || echo "No diff available")
-        ERROR_LOGS=$(tail -n 100 pipeline_output.log || echo "Test logs missing")
-        
-        PAYLOAD=$(jq -n \
-                  --arg repo "${{ github.repository }}" \
-                  --arg commit "${{ github.sha }}" \
-                  --arg diff "$GIT_DIFF" \
-                  --arg logs "$ERROR_LOGS" \
-                  --arg status "failed" \
-                  '{repo_name: $repo, commit_hash: $commit, error_logs: $logs, git_diff: $diff, status: $status}')
-                  
-        curl -X POST "${{ secrets.AGENTIC_WEBHOOK_URL }}/webhook/ci_failure" \
-             -H "Content-Type: application/json" \
-             -d "$PAYLOAD"
-             
-        echo "Agentic AI pipeline triggered."
-        exit 1
+    - name: Agentic Repair Hook
+      if: failure()
+      run: pip install agentic-repair-cli && agentic-repair push --endpoint="${{ secrets.AGENTIC_WEBHOOK_URL }}/webhook/ci_failure"
