@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import json
+imort json
 import re
 from nltk.corpus import stopwords
 
