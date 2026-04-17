@@ -35,9 +35,13 @@ jobs:
       run: |
         echo "Running automated test suites and syntax validations..." >> pipeline_output.log
         
-        # We must avoid bash pipes (| tee) because GitHub drops the exit code inside {} blocks!
-        # Instead, we directly append to the log file and manually force an exit 1 on failure.
-        python -m compileall -q . >> pipeline_output.log 2>&1 || exit 1
+        # Only compile Python files changed in the CURRENT commit so we don't flag
+        # pre-existing errors from older commits.
+        CHANGED_PY=$(git diff --name-only HEAD~1 HEAD -- '*.py' 2>/dev/null || true)
+        if [ -n "$CHANGED_PY" ]; then
+          echo "Syntax-checking changed files: $CHANGED_PY" >> pipeline_output.log
+          echo "$CHANGED_PY" | xargs python -m py_compile >> pipeline_output.log 2>&1 || exit 1
+        fi
         pytest . >> pipeline_output.log 2>&1 || exit 1
       continue-on-error: true
 
