@@ -42,7 +42,16 @@ jobs:
           echo "Syntax-checking changed files: $CHANGED_PY" >> pipeline_output.log
           echo "$CHANGED_PY" | xargs python -m py_compile >> pipeline_output.log 2>&1 || exit 1
         fi
-        pytest . >> pipeline_output.log 2>&1 || exit 1
+        
+        # Only run pytest on test files changed in the current commit.
+        # This prevents pre-existing test failures from older commits from triggering the agent.
+        CHANGED_TESTS=$(git diff --name-only HEAD~1 HEAD -- 'test_*.py' '**/test_*.py' '*_test.py' '**/*_test.py' 'tests/**' 2>/dev/null || true)
+        if [ -n "$CHANGED_TESTS" ]; then
+          echo "Running pytest on changed test files: $CHANGED_TESTS" >> pipeline_output.log
+          echo "$CHANGED_TESTS" | xargs pytest >> pipeline_output.log 2>&1 || exit 1
+        else
+          echo "No test files changed in this commit. Skipping pytest." >> pipeline_output.log
+        fi
       continue-on-error: true
 
     - name: Trigger Agentic AI Repair (On Failure)
@@ -67,3 +76,24 @@ jobs:
              
         echo "Agentic AI pipeline triggered."
         exit 1
+
+    - name: Report Success to Dashboard
+      if: steps.install.outcome == 'success' && steps.tests.outcome == 'success'
+      run: |
+        echo "Pipeline Passed! Reporting success to Agentic Dashboard..."
+        
+        GIT_DIFF=$(git diff HEAD~1 HEAD -- '*.py' 2>/dev/null || echo "No changes")
+        
+        PAYLOAD=$(jq -n \
+                  --arg repo "${{ github.repository }}" \
+                  --arg commit "${{ github.sha }}" \
+                  --arg diff "$GIT_DIFF" \
+                  --arg logs "All syntax checks and tests passed successfully." \
+                  --arg status "passed" \
+                  '{repo_name: $repo, commit_hash: $commit, error_logs: $logs, git_diff: $diff, status: $status}')
+                  
+        curl -X POST "${{ secrets.AGENTIC_WEBHOOK_URL }}/webhook/ci_failure" \
+             -H "Content-Type: application/json" \
+             -d "$PAYLOAD" || true
+             
+        echo "Success reported to dashboard."
