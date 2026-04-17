@@ -5,7 +5,7 @@ from nltk.corpus import words
 VALID_WORDS = set(words.words())
 
 def is_gibberish(query):
-    words_in_query = query.split()
+    words_in_query = query.split(
     valid_words_count = sum(1 for word in words_in_query if word.lower() in VALID_WORDS)
 
     # If fewer than 20% of words are valid, consider it gibberish
