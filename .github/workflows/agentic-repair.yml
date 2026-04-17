@@ -43,14 +43,14 @@ jobs:
           echo "$CHANGED_PY" | xargs python -m py_compile >> pipeline_output.log 2>&1 || exit 1
         fi
         
-        # Only run pytest on test files changed in the current commit.
-        # This prevents pre-existing test failures from older commits from triggering the agent.
-        CHANGED_TESTS=$(git diff --name-only HEAD~1 HEAD -- 'test_*.py' '**/test_*.py' '*_test.py' '**/*_test.py' 'tests/**' 2>/dev/null || true)
-        if [ -n "$CHANGED_TESTS" ]; then
-          echo "Running pytest on changed test files: $CHANGED_TESTS" >> pipeline_output.log
-          echo "$CHANGED_TESTS" | xargs pytest >> pipeline_output.log 2>&1 || exit 1
+        # Run pytest only if any Python file changed in the current commit.
+        # This catches runtime errors introduced by the new code while ignoring
+        # failures from commits that didn't touch Python files at all.
+        if [ -n "$CHANGED_PY" ]; then
+          echo "Python files changed -- running full test suite..." >> pipeline_output.log
+          pytest . >> pipeline_output.log 2>&1 || exit 1
         else
-          echo "No test files changed in this commit. Skipping pytest." >> pipeline_output.log
+          echo "No Python files changed in this commit. Skipping tests." >> pipeline_output.log
         fi
       continue-on-error: true
 
