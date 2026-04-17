@@ -89,7 +89,11 @@ def preprocess_query(query):
 def keyword_search(query, names):
     keyword_results = []
     # Extract specific article number if present
+<<<<<<< ours
     match = re.search(r'\barticle (\d+)\b', query, re.IGNORECASE
+=======
+    match = re.search(r'\barticle (\d+)\b', query, re.IGNORECASE)
+>>>>>>> theirs
     article_number = match[1] if match else None
 
     for item in names:
@@ -142,7 +146,11 @@ def hybrid_search(query, weight_keyword, weight_semantic):
     keyword_results = keyword_search(processed_query, names)
     # Perform semantic search
     query_embedding = semantic_model.encode([processed_query], convert_to_tensor=True)
+<<<<<<< ours
     similarities = cosine_similarity(query_embedding, name_embeddings
+=======
+    similarities = cosine_similarity(query_embedding, name_embeddings)
+>>>>>>> theirs
     semantic_results_indices = similarities.argsort()[0][-10:][::-1]  # Top 10 results
 
     results = {
